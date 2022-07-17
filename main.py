@@ -7,18 +7,66 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 import json
 
 
+class Contents:
+    def __init__(self, clientid = '', clientSecret = '', streamername = '', hassent = 0, datestr = '', webhookURL = '', timeinsec = 0):
+        self._clientid = clientid
+        self._clientSecret = clientSecret
+        self._streamername = streamername
+        self._hassent = hassent
+        self._datestr = datestr
+        self._webhookURL = webhookURL
+        self._timeinsec = timeinsec
+
+    def get_clientid(self):
+        return self._clientid
+
+    def set_clientid(self, x):
+        self._clientid = x
+
+    def get_clientSecret(self):
+        return self._clientSecret
+
+    def set_clientSecret(self, x):
+        self._clientSecret = x
+
+    def get_streamername(self):
+        return self._streamername
+
+    def set_streamername(self, x):
+        self._streamername = x
+
+    def get_hassent(self):
+        return self._hassent
+
+    def set_hassent(self, x):
+        self._hassent = x
+
+    def get_datestr(self):
+        return self._datestr
+
+    def set_datestr(self, x):
+        self._datestr = x
+
+    def get_webhookURL(self):
+        return self._webhookURL
+
+    def set_webhookURL(self, x):
+        self._webhookURL = x
+
+    def get_timeinsec(self):
+        return self._timeinsec
+
+    def set_timeinsec(self, x):
+        self._timeinsec = x
 
 def genToken():
-    client_id = 'client-id'
-    client_secret = 'client-secret'
-
     body = {
-        'client_id': client_id,
-        'client_secret': client_secret,
+        'client_id': setget.get_clientid(),
+        'client_secret': setget.get_clientSecret(),
         "grant_type": 'client_credentials'
     }
     r = requests.post('https://id.twitch.tv/oauth2/token', body)
-    keys = r.json();
+    keys = r.json()
     f2 = open("expire.txt", "w")
     f = open("appToken.txt", "w")
     f.write(keys['access_token'])
@@ -31,11 +79,8 @@ def genToken():
     print(keys)
     print('Generated a Application token!')
 
-def getList(dict):
-    return dict.keys()
 
 def isstreamerlive(client_id, keys, streamer):
-    hassent = 0
     headers = {
         'Client-ID': client_id,
         'Authorization': 'Bearer ' + keys
@@ -47,50 +92,55 @@ def isstreamerlive(client_id, keys, streamer):
         print(stream_data)
         stream_data2 = stream_data['data']
         if len(stream_data['data']) == 1:
-            if hassent == 1:
+            if setget.get_hassent() == 1:
                 print("stream is still live")
             else:
                 sendwebHook(stream_data2[0]['user_name'], 'https://www.twitch.tv/' + stream_data2[0]['user_name'], stream_data2[0]['game_name'], 'https://static-cdn.jtvnw.net/previews-ttv/live_user_' + stream_data2[0]['user_login'] + '-800x800.jpg', stream_data2[0]['title'])
                 print('live')
-                hassent = 1
+                setget.set_hassent(1)
         else:
             print('not live')
             break;
-            hassent = 0
-        time.sleep(120)
+            setget.set_hassent(0)
+        time.sleep(int(setget.get_timeinsec()))
 
 
 def sendwebHook(streamer, streamerurl, game, thumbnailurl, title):
-    webhook = DiscordWebhook(url='WEBHOOK-URL')
-
-    # create embed object for webhook
+    webhook = DiscordWebhook(url=setget.get_webhookURL())
     embed = DiscordEmbed(title=title,  color='03b2f8')
-
-    # set author
     embed.set_author(name=streamer + ' is live!', url=streamerurl)
-
-    # set image
     embed.set_image(url=thumbnailurl)
-
-
-
-    # add fields to embed
     embed.add_embed_field(name='Game', value=game)
-
-    # add embed object to webhook
     webhook.add_embed(embed)
-
     response = webhook.execute()
 
+
 if __name__ == '__main__':
+    setget = Contents()
+
+    print('Please enter Client-ID: ')
+    setget.set_clientid(input())
+
+    print('Please Enter Client-Secret: ')
+    setget.set_clientSecret(input())
+
+    print('Please Enter Streamers Username: ')
+    setget.set_streamername(input())
+
+    print('Please Enter Discord Webhook-URL: ')
+    setget.set_webhookURL(input())
+
+    print('Please Enter How many seconds you want to check status of streamer(rec: 120) : ')
+    setget.set_timeinsec(input())
+
     f2 = open("expire.txt", "r")
     datestr = f2.read()
     if datestr == '':
         genToken()
+    datestr = f2.read()
     f2.close()
     datetime2 = datetime.strptime(datestr, '%Y-%m-%d')
     datetime1 = datetime.today()
-    f2.close()
     if datetime2 < datetime1:
         print('Token has expired generating a new one!')
         genToken()
@@ -101,7 +151,7 @@ if __name__ == '__main__':
     contents = f.read()
     f.close()
     if contents != '':
-        isstreamerlive('CLIENT-ID', contents, 'streamername')
+        isstreamerlive(setget.get_clientid(), contents, setget.get_streamername())
     else:
         genToken()
 
